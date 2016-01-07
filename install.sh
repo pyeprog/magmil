@@ -3,7 +3,7 @@
 if [ "$#" != "2" ]
 then
   echo "No argument supplied"
-  echo "usage: sh install.sh rootPassword magentoUserPassword"
+  echo "usage: sh install.sh rootPassword magentoUserPassword [defaultDatabase:1 or 0]"
   exit 1
 fi
 
@@ -31,13 +31,6 @@ yum install mysql-community-server -y
 
 #Set auto start
 systemctl enable php-fpm nginx mysqld
-
-#Configure mysql
-systemctl start mysqld
-mysqladmin -u root password "$1"
-mysql -u root -p"$1" -e"source createuser.sql"
-mysqladmin -u magento password "$2"
-mysql -u root -p"$1" -e"source createdb.sql"
 
 #Configure nginx
 mv /etc/nginx/nginx.conf /etc/nginx/nginx.conf.old
@@ -68,6 +61,20 @@ gzip -vd database.sql.gz
 #Merge folders
 rsync magento/* /www/magento -av
 rsync theme/* /www/magento -av
+
+#Configure mysql
+systemctl start mysqld
+mysqladmin -u root password "$1"
+mysql -u root -p"$1" -e"source createuser.sql"
+mysqladmin -u magento password "$2"
+mysql -u root -p"$1" -e"source createdb.sql"
+if [ "$3" -eq  "1" ]
+then
+  mysql -u root -p"$1" -e"source database.sql"
+elif [ "$3" -eq "0" ]
+then
+  echo "Database magentodb keeps empty"
+fi
 
 #Chown and Chmod
 chown nginx:nginx -R /www/magento
